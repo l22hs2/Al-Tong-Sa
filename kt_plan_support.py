@@ -7,10 +7,10 @@ import time
 import csv
 import re
 
-writer = csv.writer(open("KT_plan_support.csv", "w", encoding="utf-8-sig", newline=""))
+writer = csv.writer(open("csv\KT_plan_support.csv", "w", encoding="utf-8-sig", newline=""))
 writer.writerow(["network", "plan", "name", "charge", "code"])
 
-select = csv.writer(open("KT_select.csv", "w", encoding="utf-8-sig", newline=""))
+select = csv.writer(open("csv\KT_select.csv", "w", encoding="utf-8-sig", newline=""))
 select.writerow(["plan", "call", "amount", "charge", "code"])
 
 # selenium to open Chrome
@@ -24,29 +24,28 @@ def crawling(network):
     isSelect = False
 
     # 요금제 선택
-    WebDriverWait(driver,5).until(EC.presence_of_element_located((By.XPATH, '//div[@class="prodPaymentInfo"]/button'))).click()
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//div[@class="prodPaymentInfo"]/button'))).click()
 
-    # 제목 리스트
-    titles = len(WebDriverWait(driver,5).until(EC.presence_of_all_elements_located((By.XPATH, '//div[@class="prodPaySort"]/div/button'))))
+    # 제목 리스트 (요금제 탭 개수)
+    titles = len(WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, '//div[@class="prodPaySort"]/div/button'))))
 
     # num_title = len(titles)
-    for num in range(2, titles + 1): # 맨 앞 전체요금제 제외 -> 2부터 시작
+    for num in range(2, titles + 1): # 맨 앞 전체요금제 제외(전체 요금제 제외) -> 2부터 시작
         driver.find_element(By.XPATH, f'//div[@id="pplGroupNmList"]/button[{num}]').click() # 크롤링할 요금제 탭 선택
 
         title = driver.find_element(By.XPATH, f'//div[@id="pplGroupNmList"]/button[{num}]/span').text # 현재(선택된) 요금제 탭 제목
 
         if (title == "순 선택형(LTE)") or (title == "순 망내무한 선택형(LTE)"):
             isSelect = True
-            title = title[:-5]
+            title = title[:-5] # "(LTE)" 문구 제거
 
-        plans_list = len(WebDriverWait(driver,5).until(EC.presence_of_all_elements_located((By.XPATH, '//div[@class="chargeListWrap"]/ul/li'))))
+        plans_list = len(WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, '//ul[@id="pplChargeList"]/li'))))
 
         for i in range(1, plans_list + 1):
-            plans = driver.find_element(By.XPATH, f'//div[@class="chargeListWrap"]/ul/li[{i}]')
+            plans = driver.find_element(By.XPATH, f'//ul[@id="pplChargeList"]/li[{i}]')
 
-            name_strong = plans.find_element(By.XPATH, 'div/a/div/strong').text     # 필요한 요금제 명
-            name_span = plans.find_element(By.XPATH, 'div/a/div/strong/span').text  # 불필요한 요금제 설명
-            name = name_strong.rstrip(name_span) # 불필요 설명 제거
+            name_strong = plans.find_element(By.XPATH, 'div/a/div/strong').text # 요금제 텍스트 + 부가 설명
+            name = name_strong.split("\n")[0]   # 필요한 요금제 명
             name = name.rstrip() # 공백 제거
 
             charge = plans.find_element(By.XPATH, 'div/div/span').text
@@ -71,20 +70,23 @@ def crawling(network):
 
         isSelect = False
 
-        # # 마지막 페이지가 아니면
-        # if num != titles:
-        #     # 다음 요금제 탭 클릭
-        #     driver.find_element(By.XPATH, f'//div[@id="pplGroupNmList"]/button[{num + 1}]').click()
+        # 마지막 페이지가 아니면
+        if num != titles:
+            # 다음 요금제 탭 클릭
+            driver.find_element(By.XPATH, f'//div[@id="pplGroupNmList"]/button[{num + 1}]').click()
 
 
-## 5G
+# 5G
 crawling("5G")
 
 ## LTE
-time.sleep(1)
-driver.find_element(By.XPATH, '//button[@id="btnLayerClose"]').click() # 요금제 창 닫기
-time.sleep(0.3)
-driver.find_element(By.XPATH, '//div[@class="prodCateWrap support"]/ul/li[2]').click()
+# time.sleep(1)
+# 요금제 창 닫기
+close = driver.find_element(By.XPATH, '//*[@id="btnLayerClose"]')
+driver.execute_script("arguments[0].click();", close)
+# time.sleep(0.3)
+
+WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//div[@class="prodCateWrap support shoptab_basic"]/ul/li[2]'))).click() # LTE탭 클릭
 crawling("LTE")
 
 driver.quit()
