@@ -2,15 +2,17 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 import time
 import csv
 import re
 
-writer = csv.writer(open("SKT_plan_support.csv", "w", encoding="utf-8-sig", newline=""))
+writer = csv.writer(open("csv\SKT_plan_support.csv", "w", encoding="utf-8-sig", newline=""))
 writer.writerow(["network", "plan", "name", "charge", "code"])
 
-select = csv.writer(open("SKT_select.csv", "w", encoding="utf-8-sig", newline=""))
+select = csv.writer(open("csv\SKT_select.csv", "w", encoding="utf-8-sig", newline=""))
 select.writerow(["plan", "call", "amount", "charge", "code"])
 
 others = {
@@ -28,7 +30,11 @@ others = {
 }
 
 # selenium for open Chrome
-driver = webdriver.Chrome()
+options = webdriver.ChromeOptions()
+options.add_argument("--incognito") # 시크릿 모드
+options.add_experimental_option("detach", True) # 브라우저 자동 종료 방지
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
 
 # 페이지 열기
 driver.get("https://shop.tworld.co.kr/notice?modelNwType=5G&saleMonth=24&saleYn=Y")
@@ -37,17 +43,20 @@ def crawling(network):
     isSelect = False
 
     # 요금제 선택 창 열기
-    WebDriverWait(driver,5).until(EC.presence_of_element_located((By.XPATH, '//button[@id="select-fee"]'))).click()
+    open = WebDriverWait(driver,5).until(EC.presence_of_element_located((By.XPATH, '//button[@id="select-fee"]')))
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", open)
+    open.click()
 
     # 크롤링 탭 전환
     driver.switch_to.window(driver.window_handles[-1])
 
     # 요금제 탭 리스트
-    plan_list = WebDriverWait(driver,5).until(EC.presence_of_all_elements_located((By.XPATH, '//ul[@id="subscriptionCategory"]/li')))
+    plan_list = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, '//ul[@id="subscriptionCategory"]/li')))
 
-    for plans in plan_list:
-        plans.click() # 요금제 탭 클릭
-        time.sleep(0.3)
+    for num, plans in enumerate(plan_list):
+        if num != 0:
+            plans.click() # 요금제 탭 클릭
+        driver.implicitly_wait(10)
 
         # 요금제 제목
         plan_name = plans.find_element(By.XPATH, 'a').text
@@ -57,7 +66,7 @@ def crawling(network):
             isSelect = True
         
         # 요금제 리스트
-        details_list = WebDriverWait(driver,5).until(EC.presence_of_all_elements_located((By.XPATH, '//ul[@id="subscriptionList"]/li')))
+        details_list = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, '//ul[@id="subscriptionList"]/li')))
 
         for details in details_list:
             detail_name = details.find_element(By.XPATH, 'div/div/div/div/span').text
@@ -89,6 +98,6 @@ crawling("LTE")
 
 # 메인 창 닫기
 driver.switch_to.window(driver.window_handles[0])
-driver.close()
+driver.quit()
 
 
