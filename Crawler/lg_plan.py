@@ -9,9 +9,14 @@ import time
 import csv
 import re
 
-writer = csv.writer(open("csv\LG_plan.csv", "w", encoding="utf-8-sig", newline=""))
-title = ["network", "title", "name", "charge", "code"]
-writer.writerow(title)
+import pymysql
+conn = pymysql.connect(host='localhost', user='root', password='1234', db='al_tong_sa', charset='utf8')
+cursor = conn.cursor()
+sql = "insert into lg_plan values (%s, %s, %s, %s, %s)"
+
+# writer = csv.writer(open("csv\LG_plan.csv", "w", encoding="utf-8-sig", newline=""))
+# title = ["network", "title", "name", "charge", "code"]
+# writer.writerow(title)
 
 options = webdriver.ChromeOptions()
 options.add_argument("--incognito") # 시크릿 모드
@@ -56,7 +61,8 @@ def crawling(network):
             charge = contents[5].find_element(By.XPATH, 'span/span').get_attribute("innerText") # 요금
             charge = re.sub("월|원|,| ", "", charge) # 문구 제거
 
-            writer.writerow([network, title, name_clean, charge, code])
+            # writer.writerow([network, title, name_clean, charge, code])
+            cursor.execute(sql, (network, title, name_clean, charge, code))
 
 crawling("5G")
 
@@ -64,4 +70,6 @@ crawling("5G")
 driver.find_element(By.XPATH, '//div[@class="c-tab-slidemenu"]/ul/li[2]/a').click() # LTE 페이지로 이동
 crawling("LTE")
 
+conn.commit()
+conn.close()
 driver.quit()

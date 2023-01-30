@@ -7,11 +7,17 @@ import time
 import csv
 import re
 
-writer = csv.writer(open("csv\KT_plan_support.csv", "w", encoding="utf-8-sig", newline=""))
-writer.writerow(["network", "plan", "name", "charge", "code"])
+import pymysql
+conn = pymysql.connect(host='localhost', user='root', password='1234', db='al_tong_sa', charset='utf8')
+cursor = conn.cursor()
+sql = "insert into kt_plan values (%s, %s, %s, %s, %s)"
+sql_select = "insert into kt_plan_select values (%s, %s, %s, %s, %s)"
 
-select = csv.writer(open("csv\KT_select.csv", "w", encoding="utf-8-sig", newline=""))
-select.writerow(["plan", "call", "amount", "charge", "code"])
+# writer = csv.writer(open("csv\KT_plan_support.csv", "w", encoding="utf-8-sig", newline=""))
+# writer.writerow(["network", "plan", "name", "charge", "code"])
+
+# select = csv.writer(open("csv\KT_select.csv", "w", encoding="utf-8-sig", newline=""))
+# select.writerow(["plan", "call", "amount", "charge", "code"])
 
 # selenium to open Chrome
 driver = webdriver.Chrome()
@@ -49,7 +55,8 @@ def crawling(network):
             name = name.rstrip() # 공백 제거
 
             charge = plans.find_element(By.XPATH, 'div/div/span').text
-            charge = charge.strip("월원")
+            # charge = charge.strip("월원")
+            charge = re.sub("월|원|,| ", "", charge) # 문구 제거
 
             plans.click() # 요금제 클릭
             driver.find_element(By.XPATH, '//button[@id="btnLayerItem"]').click() # 선택 완료 버튼 클릭
@@ -62,9 +69,11 @@ def crawling(network):
                 call = call_p.search(name).group()
                 data = data_p.search(name).group()
 
-                select.writerow([title, call, data, charge, code])
+                # select.writerow([title, call, data, charge, code])
+                cursor.execute(sql, (title, call, data, charge, code))
             else:
-                writer.writerow([network, title, name, charge, code])
+                cursor.execute(sql, (network, title, name, charge, code))
+                # writer.writerow([network, title, name, charge, code])
 
             driver.find_element(By.XPATH, '//div[@class="prodPaymentInfo"]/button').click() # 다시 요금제 선택 창 열기
 
@@ -89,4 +98,6 @@ driver.execute_script("arguments[0].click();", close)
 WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//div[@class="prodCateWrap support shoptab_basic"]/ul/li[2]'))).click() # LTE탭 클릭
 crawling("LTE")
 
+conn.commit()
+conn.close()
 driver.quit()

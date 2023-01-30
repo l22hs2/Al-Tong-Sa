@@ -6,7 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import csv
 
-filename = "SKT_plan.csv"
+filename = "csv\SKT_plan.csv"
 file = open(filename, "w", encoding="utf-8-sig", newline="")
 writer = csv.writer(file)
 

@@ -7,9 +7,14 @@ import time
 import csv
 import re
 
-writer = csv.writer(open("KT_plan.csv", "w", encoding="utf-8-sig", newline=""))
-title = ["network", "plan", "name", "charge", "code"]
-writer.writerow(title)
+import pymysql
+conn = pymysql.connect(host='localhost', user='root', password='1234', db='al_tong_sa', charset='utf8')
+cursor = conn.cursor()
+sql = "insert into kt_plan values (%s, %s, %s, %s, %s)"
+
+# writer = csv.writer(open("csv\KT_plan.csv", "w", encoding="utf-8-sig", newline=""))
+# title = ["network", "plan", "name", "charge", "code"]
+# writer.writerow(title)
 
 # selenium to open Chrome
 driver = webdriver.Chrome()
@@ -50,12 +55,15 @@ def crawling(network):
             for details in plans.find_elements(By.XPATH, 'tbody/tr'):
                 detail_name = details.find_element(By.XPATH, 'th[@class="title"]').text # 상세 요금제 명
                 detail_charge = details.find_element(By.XPATH, 'td[@class="charge"]/strong').text # 상세 요금제 가격
+                detail_charge = re.sub(",| ", "", detail_charge) # 문구 제거
                 code = details.find_element(By.XPATH, 'td[@class="btns"]/a[@class="btn regular is-line-navygray"]').get_attribute('id') # 상세 요금제 코드
 
                 if network == "5G":
-                    writer.writerow(["5G", plan_name, detail_name, detail_charge, code])
+                    cursor.execute(sql, ("5G", plan_name, detail_name, detail_charge, code))
+                    # writer.writerow(["5G", plan_name, detail_name, detail_charge, code])
                 elif network == "LTE":
-                    writer.writerow(["LTE", plan_name, detail_name, detail_charge, code])
+                    cursor.execute(sql, ("LTE", plan_name, detail_name, detail_charge, code))
+                    # writer.writerow(["LTE", plan_name, detail_name, detail_charge, code])
 
 ## 5G 요금제 크롤링
 crawling("5G")
@@ -66,4 +74,6 @@ driver.execute_script("window.scrollTo(0, 0)")
 WebDriverWait(driver,5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="2"]/a/span'))).click()
 crawling("LTE")
 
+conn.commit()
+conn.close()
 driver.quit()
